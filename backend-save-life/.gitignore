@@ -1,6 +1,9 @@
 # iii unifying backend engine files
 .env
-data/
+# Keep runtime configuration in git, ignore runtime state files
+data/*
+!data/configuration/
+!data/configuration/**
 
 #Sqlite
 *.db
