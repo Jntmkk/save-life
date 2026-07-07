@@ -1,0 +1,10 @@
+# iii engine configuration
+# Docs: https://iii.dev/docs/how-to/configure-engine
+workers:
+  - name: iii-observability
+    # 'iii-observability': value now lives in the configuration worker at ./data/configuration/iii-observability.yaml. Edit at runtime via 'iii config set iii-observability' (or 'configuration::set'); this block is no longer read.
+
+  - name: iii-queue
+    # 'iii-queue': value now lives in the configuration worker at ./data/configuration/iii-queue.yaml. Edit at runtime via 'iii config set iii-queue' (or 'configuration::set'); this block is no longer read.
+  - name: iii-http
+    # 'iii-http': value now lives in the configuration worker at ./data/configuration/iii-http.yaml. Edit at runtime via 'iii config set iii-http' (or 'configuration::set'); this block is no longer read.
