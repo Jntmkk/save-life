@@ -1,0 +1,89 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  REGISTRY: registry.cn-hangzhou.aliyuncs.com
+  NAMESPACE: u-rep
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Aliyun Container Registry
+        run: |
+          echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | \
+            docker login --username=tb2395355_2012 --password-stdin \
+            registry.cn-hangzhou.aliyuncs.com
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend-save-life
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-backend:latest
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-backend:${{ github.sha }}
+
+      - name: Build and push math-worker
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend-save-life/workers/math-worker
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-math-worker:latest
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-math-worker:${{ github.sha }}
+
+      - name: Build and push caller-worker
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend-save-life/workers/caller-worker
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-caller-worker:latest
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-caller-worker:${{ github.sha }}
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./front-save-life
+          push: true
+          build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL || 'https://api.fake-rest.refine.dev' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-frontend:latest
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-frontend:${{ github.sha }}
+
+  # Optional: auto-deploy to a single server after images are pushed.
+  # Set vars DEPLOY_HOST / DEPLOY_USER, secrets DEPLOY_SSH_KEY / ALIYUN_REGISTRY_PASSWORD,
+  # and optionally vars.VITE_API_URL.
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: vars.DEPLOY_HOST != ''
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/save-life || exit 1
+            git pull
+            echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | \
+              docker login --username=tb2395355_2012 --password-stdin \
+              registry.cn-hangzhou.aliyuncs.com
+            docker-compose pull
+            TAG=latest VITE_API_URL=${{ vars.VITE_API_URL || 'https://api.fake-rest.refine.dev' }} \
+              docker-compose up -d
+            docker-compose ps

@@ -1,0 +1,69 @@
+services:
+  backend:
+    build:
+      context: ./backend-save-life
+    image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-backend:${TAG:-latest}
+    container_name: save-life-backend
+    ports:
+      - "3111:3111"    # REST API
+      - "49134:49134"  # WebSocket (worker connections)
+      - "3112:3112"    # Stream API
+      - "9464:9464"    # Prometheus metrics
+    volumes:
+      - backend_data:/app/data
+    environment:
+      RUST_LOG: info
+      III_EXECUTION_CONTEXT: docker
+    restart: unless-stopped
+    networks:
+      - save-life
+
+  math-worker:
+    build:
+      context: ./backend-save-life/workers/math-worker
+    image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-math-worker:${TAG:-latest}
+    container_name: save-life-math-worker
+    environment:
+      III_URL: ws://backend:49134
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - save-life
+
+  caller-worker:
+    build:
+      context: ./backend-save-life/workers/caller-worker
+    image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-caller-worker:${TAG:-latest}
+    container_name: save-life-caller-worker
+    environment:
+      III_URL: ws://backend:49134
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - save-life
+
+  frontend:
+    build:
+      context: ./front-save-life
+      args:
+        VITE_API_URL: ${VITE_API_URL:-https://api.fake-rest.refine.dev}
+    image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-frontend:${TAG:-latest}
+    container_name: save-life-frontend
+    ports:
+      - "80:3000"
+    environment:
+      PORT: 3000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - save-life
+
+networks:
+  save-life:
+    driver: bridge
+
+volumes:
+  backend_data:
