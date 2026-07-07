@@ -61,6 +61,32 @@ services:
     networks:
       - save-life
 
+  # iii Console：引擎的可视化运维界面
+  console:
+    image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-backend:${TAG:-latest}
+    container_name: save-life-console
+    command:
+      - console
+      - --host
+      - 0.0.0.0
+      - --engine-host
+      - backend
+      - --engine-port
+      - "3111"
+      - --ws-port
+      - "3112"
+      - --bridge-port
+      - "49134"
+      - --port
+      - "3113"
+    ports:
+      - "127.0.0.1:3113:3113"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - save-life
+
 networks:
   save-life:
     driver: bridge
