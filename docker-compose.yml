@@ -1,6 +1,6 @@
 services:
   iii-init:
-    image: busybox:1.36
+    image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-math-worker:${TAG:-latest}
     user: "0:0"
     volumes:
       - backend_data:/data
