@@ -2,7 +2,7 @@ FROM node:22-slim AS deps
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 
 RUN npm install -g pnpm@11.10.0 && pnpm install --frozen-lockfile
 
