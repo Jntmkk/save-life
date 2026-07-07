@@ -19,7 +19,7 @@ COPY . .
 ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
 
-RUN pnpm run build
+RUN npm run build
 
 FROM node:22-slim AS runner
 
