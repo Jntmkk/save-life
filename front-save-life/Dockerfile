@@ -1,40 +1,38 @@
-# This Dockerfile uses `serve` npm package to serve the static files with node process.
-# You can find the Dockerfile for nginx in the following link:
-# https://github.com/refinedev/dockerfiles/blob/main/vite/Dockerfile.nginx
-FROM refinedev/node:18 AS base
+FROM node:22-slim AS deps
 
-FROM base as deps
+WORKDIR /app
 
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
+COPY package.json pnpm-lock.yaml .npmrc ./
 
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+RUN npm install -g pnpm@11.10.0 && pnpm install --frozen-lockfile
 
-FROM base as builder
+FROM node:22-slim AS builder
 
-ENV NODE_ENV production
+WORKDIR /app
 
-COPY --from=deps /app/refine/node_modules ./node_modules
+ENV NODE_ENV=production
+
+COPY --from=deps /app/node_modules ./node_modules
 
 COPY . .
 
 ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
 
-RUN npm run build
+RUN pnpm run build
 
-FROM base as runner
+FROM node:22-slim AS runner
 
-ENV NODE_ENV production
+WORKDIR /app
+
+ENV NODE_ENV=production
 
 RUN npm install -g serve
 
-COPY --from=builder /app/refine/dist ./
+COPY --from=builder /app/dist ./
 
-USER refine
+USER node
 
-CMD ["serve"]
+EXPOSE 3000
+
+CMD ["serve", "-l", "3000"]
