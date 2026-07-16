@@ -52,6 +52,15 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-caller-worker:latest
             ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-caller-worker:${{ github.sha }}
 
+      - name: Build and push auth
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend-auth
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-auth:latest
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-auth:${{ github.sha }}
+
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
@@ -59,6 +68,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_URL=${{ vars.VITE_API_URL || 'https://api.fake-rest.refine.dev' }}
+            VITE_AUTH_API_URL=${{ vars.VITE_AUTH_API_URL || 'http://172.24.252.34:8080' }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-frontend:latest
             ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/save-life-frontend:${{ github.sha }}

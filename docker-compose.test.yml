@@ -1,3 +1,10 @@
+# Test environment compose — all services run prebuilt images from Aliyun ACR
+# (built by GitHub Actions). Watchtower on the host auto-updates containers
+# when new :latest images are pushed.
+#
+# Usage:
+#   docker compose -f docker-compose.test.yml pull
+#   docker compose -f docker-compose.test.yml up -d
 services:
   iii-init:
     image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-math-worker:${TAG:-latest}
@@ -8,16 +15,14 @@ services:
     restart: "no"
 
   backend:
-    build:
-      context: ./backend-save-life
     image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-backend:${TAG:-latest}
     container_name: save-life-backend
     user: "65532:65532"
     ports:
-      - "127.0.0.1:3111:3111"    # REST API
-      - "127.0.0.1:49134:49134"  # WebSocket (worker connections)
-      - "127.0.0.1:3112:3112"    # Stream API
-      - "127.0.0.1:9464:9464"    # Prometheus metrics
+      - "3111:3111"    # REST API
+      - "49134:49134"  # WebSocket (worker connections)
+      - "3112:3112"    # Stream API
+      - "9464:9464"    # Prometheus metrics
     volumes:
       - backend_data:/app/data
     environment:
@@ -31,8 +36,6 @@ services:
       - save-life
 
   math-worker:
-    build:
-      context: ./backend-save-life/workers/math-worker
     image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-math-worker:${TAG:-latest}
     container_name: save-life-math-worker
     environment:
@@ -44,8 +47,6 @@ services:
       - save-life
 
   caller-worker:
-    build:
-      context: ./backend-save-life/workers/caller-worker
     image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-caller-worker:${TAG:-latest}
     container_name: save-life-caller-worker
     environment:
@@ -57,12 +58,10 @@ services:
       - save-life
 
   auth:
-    build:
-      context: ./backend-auth
     image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-auth:${TAG:-latest}
     container_name: save-life-auth
     ports:
-      - "127.0.0.1:8080:8080"
+      - "8080:8080"
     environment:
       PORT: 8080
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
@@ -70,31 +69,27 @@ services:
       DB_PORT: ${DB_PORT:-3306}
       DB_USER: ${DB_USER:?set DB_USER in .env}
       DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
-      DB_NAME: ${DB_NAME:-save_life_prod}
+      DB_NAME: ${DB_NAME:-save_life_test}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
     restart: unless-stopped
     networks:
       - save-life
 
   frontend:
-    build:
-      context: ./front-save-life
-      args:
-        VITE_API_URL: ${VITE_API_URL:-https://api.fake-rest.refine.dev}
-        VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-http://localhost:8080}
     image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-frontend:${TAG:-latest}
     container_name: save-life-frontend
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     environment:
       PORT: 3000
     depends_on:
       - backend
+      - auth
     restart: unless-stopped
     networks:
       - save-life
 
-  # iii Console：引擎的可视化运维界面
+  # iii Console: engine ops UI
   console:
     image: registry.cn-hangzhou.aliyuncs.com/u-rep/save-life-backend:${TAG:-latest}
     container_name: save-life-console
@@ -113,7 +108,7 @@ services:
       - --port
       - "3113"
     ports:
-      - "127.0.0.1:3113:3113"
+      - "3113:3113"
     depends_on:
       - backend
     restart: unless-stopped
